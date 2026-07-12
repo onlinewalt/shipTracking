@@ -26,7 +26,7 @@ def init_cache_from_db():
     else:
         print("📭 数据库中无静态数据，缓存将在运行时自动填充")
 
-async def run_ais_client(socketio, mmsi_list, stop_event):
+async def run_ais_client(socketio, mmsi_list, stop_event,data_push_callback=None):
     """AIS 数据流主协程"""
     retry_count = 0
     while retry_count < Config.MAX_RETRIES:
@@ -36,7 +36,8 @@ async def run_ais_client(socketio, mmsi_list, stop_event):
         try:
             print(f"🔌 正在尝试连接 aisstream.io... (第 {retry_count + 1} 次)")
             async with websockets.connect(
-                Config.AIS_STREAM_URL
+                Config.AIS_STREAM_URL,
+                ping_timeout=Config.SOCKETIO_PING_TIMEOUT
             ) as websocket:
                 retry_count = 0
                 # 构建订阅消息
@@ -62,7 +63,7 @@ async def run_ais_client(socketio, mmsi_list, stop_event):
                     if stop_event.is_set():
                         print("🛑 收到停止信号，优雅退出 AIS 循环")
                         return
-                    process_ais_message(message_json, socketio)
+                    process_ais_message(message_json, socketio,data_push_callback)
         except Exception as e:
             if stop_event.is_set():
                 print("✅ AIS 连接已正常关闭")
@@ -76,7 +77,7 @@ async def run_ais_client(socketio, mmsi_list, stop_event):
                 socketio.emit('status_update', {'msg': f'❌ AIS 订阅失败，已重试 {Config.MAX_RETRIES} 次'})
                 return
 
-def process_ais_message(msg, socketio):
+def process_ais_message(msg, socketio, data_push_callback=None):
     """处理单条 AIS 消息"""
     try:
         message = json.loads(msg)
@@ -85,7 +86,7 @@ def process_ais_message(msg, socketio):
         if msg_type == "ShipStaticData":
             _process_static_data(message, socketio)
         elif msg_type == "PositionReport":
-            _process_position_report(message, socketio)
+            _process_position_report(message, socketio, data_push_callback)
     except Exception as e:
         print(f"❌ 处理 AIS 消息时发生错误: {e}")
 
@@ -125,7 +126,7 @@ def _process_static_data(message, socketio):
             }
             print(f"📝 静态数据已持久化: MMSI={mmsi}, 船名={name}")
 
-def _process_position_report(message, socketio):
+def _process_position_report(message, socketio, data_push_callback=None):
     """处理动态位置数据"""
     ais_message = message['Message']['PositionReport']
     mmsi = ais_message.get('UserID')
@@ -156,4 +157,10 @@ def _process_position_report(message, socketio):
     }
     
     save_ship_position(ship_info)
+    print(f"📍 船舶位置已保存: MMSI={mmsi}, 坐标=({ship_info['lat']}, {ship_info['lon']})")
     # 节流推送逻辑将移至 socket_events.py 中处理
+
+        # ✅ 关键修改：使用回调函数推送数据
+    if data_push_callback:
+        data_push_callback(ship_info)
+    # 如果 data_push_callback 为 None，则不推送（便于测试或特殊场景）

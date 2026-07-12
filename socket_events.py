@@ -54,19 +54,20 @@ def register_socket_events(socketio):
             for i in range(0, len(messages), Config.MAX_BATCH_SIZE):
                 batch = messages[i:i + Config.MAX_BATCH_SIZE]
                 socketio.emit('batch_ship_location', {'ships': batch})
-
+   
     def throttled_emit(msg):
-        """节流入口：收到 AIS 消息时调用"""
-        nonlocal  last_flush_time
+        """节流入口：收到 AIS 消息时调用，只负责入队"""
         mmsi = msg.get('mmsi')
-        if not mmsi: return
-        
+        if not mmsi: 
+            print("⚠️ 收到无 MMSI 的消息，已丢弃")
+            return
+            
+        # ✅ 3. 简化逻辑，只负责将消息放入缓冲区
         with buffer_lock:
             throttle_buffer[mmsi] = msg
-            
-        now = time.time()
-        if now - last_flush_time >= Config.FLUSH_INTERVAL:
-            flush_buffer()
+            # 可选：添加调试日志
+            print(f"📥 消息入队: {mmsi}, 当前缓冲区大小: {len(throttle_buffer)}")
+
 
     def start_periodic_flush():
         """启动后台线程，定时强制刷新缓冲区"""
@@ -117,8 +118,8 @@ def register_socket_events(socketio):
         try:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-            # 将 socketio 实例和 stop_event 传递给 AIS 处理器
-            loop.run_until_complete(run_ais_client(socketio, mmsi_list, stop_event))
+            # ✅ 关键修改：将 throttled_emit 函数作为回调传入
+            loop.run_until_complete(run_ais_client(socketio, mmsi_list, stop_event, throttled_emit))
         finally:
             loop.close()
             print("🧹 AIS 线程事件循环已关闭")
@@ -261,5 +262,3 @@ def register_socket_events(socketio):
                 emit('ship_location', location_msg)
             else:
                 emit('status_update', {'msg': '📭 未查询到数据'})
-
-

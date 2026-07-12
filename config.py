@@ -21,6 +21,7 @@ class Config:
     # SocketIO 配置
     SOCKETIO_ASYNC_MODE = 'threading'
     SOCKETIO_CORS_ALLOWED_ORIGINS = "*"
+    SOCKETIO_PING_TIMEOUT = 300
 
 
     # 节流配置
