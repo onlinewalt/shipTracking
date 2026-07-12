@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenLayers 天地图影像多船追踪与历史回放</title>
+    
+    <!-- OpenLayers 样式 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v10.4.0/ol.css">
+    
+    <!-- ✅ 引入外部 CSS 文件 -->
+    <link rel="stylesheet" href="/static/css/style.css">
+
+    <!-- Socket.IO 库 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    
+    <!-- OpenLayers 库 -->
+    <script src="https://cdn.jsdelivr.net/npm/ol@v10.4.0/dist/ol.js"></script>
+</head>
+<body>
+    <!-- 顶部搜索面板 -->
+    <div id="search-panel">
+        <input type="text" id="mmsiInput" placeholder="输入MMSI，多船用逗号分隔" />
+        <button id="queryBtn" class="btn-query">查询</button>
+        <button id="stopBtn" class="btn-stop">⏹️ 停止</button>
+        <button id="clearBtn" class="btn-clear">🧹 清空地图</button>
+    </div>
+
+    <!-- 右侧船只列表 -->
+    <div id="ship-list-panel">
+        <!-- 新增：标签页导航 -->
+        <div class="tab-nav">
+            <button class="tab-btn active" data-tab="tracking">🚢 实时追踪</button>
+            <button class="tab-btn" data-tab="history">📜 历史记录</button>
+        </div>
+
+        <!-- 新增：实时追踪容器 -->
+        <div id="tracking-container" class="tab-content active"></div>
+
+        <!-- 新增：历史记录容器 -->
+        <div id="history-container" class="tab-content"></div>
+    </div>
+
+    <!-- 底部轨迹回放面板 -->
+    <div id="track-panel">
+        <label>开始:</label>
+        <input type="datetime-local" id="trackStart" />
+        <label>结束:</label>
+        <input type="datetime-local" id="trackEnd" />
+        <button id="playTrackBtn" class="btn-play">▶ 回放</button>
+        <input type="range" id="track-progress" min="0" max="100" value="0" />
+        <span id="track-time-label">就绪</span>
+    </div>
+
+    <!-- 状态栏 -->
+    <div id="status-panel">等待输入 MMSI...或点击查询按钮进行全船查询(默认中国沿海)</div>
+    
+    <!-- 地图容器 -->
+    <div id="map"></div>
+
+    <!-- 主应用入口脚本 -->
+    <script type="module">
+        // 1. 配置天地图 Key
+        const TDT_KEY = "94e19d930f28e43914d30d3315332a49";
+        if (!TDT_KEY) {
+            console.error("❌ 错误：未获取到天地图 API Key，请检查后端环境变量配置！");
+        }
+        const tdtImgUrl = `https://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${TDT_KEY}`;
+        const tdtCiaUrl = `https://t0.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILEMATRIX={z}&TILEROW={y}&TILECOL={x}&tk=${TDT_KEY}`;
+
+        // 2. 初始化地图
+        const vectorSource = new ol.source.Vector();
+        const map = new ol.Map({
+            target: 'map',
+            layers: [
+                new ol.layer.Tile({ source: new ol.source.XYZ({ url: tdtImgUrl }) }),
+                new ol.layer.Tile({ source: new ol.source.XYZ({ url: tdtCiaUrl }) }),
+                new ol.layer.Vector({ source: vectorSource })
+            ],
+            view: new ol.View({
+                center: ol.proj.fromLonLat([120.0, 30.0]),
+                zoom: 6
+            })
+        });
+
+        // 3. 导入处理器并立即执行
+        try {
+            const { initSocketHandlers } = await import('{{ url_for("static", filename="js/socket.js") }}');
+            const { initUIHandlers } = await import('{{ url_for("static", filename="js/ui.js") }}');
+
+            // 全局状态
+            const App = {
+                state: {
+                    shipMarkers: {},
+                    isFullShipMode: false
+                }
+            };
+
+            // 初始化
+            const socket = initSocketHandlers(
+                map, 
+                App.state, 
+                document.getElementById('shipListContainer'), 
+                document.getElementById('status-panel'),
+                vectorSource
+            );
+
+            initUIHandlers(
+                map, 
+                App.state, 
+                document.getElementById('status-panel'),
+                vectorSource,
+                socket 
+            );
+
+            // 挂载到 window 便于调试
+            window.App = App;
+            window.socket = socket;
+
+        } catch (error) {
+            console.error("🚨 应用启动失败:", error);
+            document.getElementById('status-panel').textContent = "🚨 应用加载失败，请查看控制台日志";
+        }
+    </script>
+</body>
+</html>

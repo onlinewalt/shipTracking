@@ -1,0 +1,239 @@
+/* static/css/style.css */
+
+/* 全局重置与地图容器 */
+body { 
+    margin: 0; 
+    padding: 0; 
+    font-family: Arial, sans-serif; 
+}
+#map { 
+    width: 100%; 
+    height: 100vh; 
+}
+
+/* 顶部搜索面板 */
+#search-panel {
+    position: absolute; 
+    top: 10px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    z-index: 1000; 
+    background: white; 
+    padding: 10px;
+    border-radius: 8px; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: flex; 
+    gap: 8px; 
+    align-items: center;
+}
+input { 
+    padding: 8px; 
+    border: 1px solid #ccc; 
+    border-radius: 4px; 
+}
+.btn-query { 
+    padding: 8px 15px; 
+    background: #007bff; 
+    color: white; 
+    border: none; 
+    border-radius: 4px; 
+    cursor: pointer; 
+}
+.btn-query:hover { 
+    background: #0056b3; 
+}
+.btn-stop { 
+    padding: 8px 15px; 
+    background: #ffc107; 
+    color: #333; 
+    border: none; 
+    border-radius: 4px; 
+    cursor: pointer; 
+}
+.btn-stop:hover { 
+    background: #e0a800; 
+}
+.btn-clear { 
+    padding: 8px 15px; 
+    background: #dc3545; 
+    color: white; 
+    border: none; 
+    border-radius: 4px; 
+    cursor: pointer; 
+}
+.btn-clear:hover { 
+    background: #b02a37; 
+}
+
+/* 底部状态栏 */
+#status-panel {
+    position: absolute; 
+    bottom: 10px; 
+    left: 10px; 
+    z-index: 1000;
+    background: rgba(0,0,0,0.7); 
+    color: white; 
+    padding: 8px 12px;
+    border-radius: 5px; 
+    font-size: 14px;
+    max-width: 80%; 
+    white-space: nowrap; 
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 右侧船只列表面板 */
+#ship-list-panel {
+    position: absolute; 
+    top: 60px; 
+    right: 10px; 
+    z-index: 1000;
+    background: white; 
+    padding: 10px; 
+    width: 240px;
+    border-radius: 8px; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    max-height: 80vh; 
+    overflow-y: auto;
+}
+#ship-list-panel h3 { 
+    margin: 0 0 10px 0; 
+    font-size: 16px; 
+    border-bottom: 1px solid #eee; 
+    padding-bottom: 5px; 
+}
+.ship-item { 
+    padding: 8px; 
+    font-size: 14px; 
+    color: #333; 
+    border-bottom: 1px dashed #eee; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between;
+    transition: background 0.2s;
+}
+.ship-item:hover { 
+    background: #f0f8ff; 
+}
+.ship-info { 
+    display: flex; 
+    align-items: center; 
+    cursor: pointer; 
+    flex: 1;
+}
+.ship-icon { 
+    width: 10px; 
+    height: 10px; 
+    background: #007bff; 
+    border-radius: 50%; 
+    margin-right: 8px; 
+    flex-shrink: 0; 
+}
+.empty-msg { 
+    font-size: 12px; 
+    color: #999; 
+    padding: 10px 0; 
+}
+
+/* 轨迹回放按钮 */
+.btn-track { 
+    font-size: 12px; 
+    padding: 2px 6px; 
+    background: #6c757d; 
+    color: white; 
+    border: none; 
+    border-radius: 3px; 
+    cursor: pointer; 
+    margin-left: 5px;
+}
+.btn-track:hover { 
+    background: #5a6268; 
+}
+.btn-track.playing { 
+    background: #28a745; 
+}
+
+/* 底部轨迹控制面板 */
+#track-panel {
+    position: absolute; 
+    bottom: 50px; 
+    left: 50%; 
+    transform: translateX(-50%);
+    z-index: 1000; 
+    background: white; 
+    padding: 15px 20px;
+    border-radius: 8px; 
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    display: none; 
+    align-items: center; 
+    gap: 10px; 
+    min-width: 550px;
+}
+#track-panel label { 
+    font-size: 13px; 
+    white-space: nowrap; 
+}
+#track-panel input[type="datetime-local"] { 
+    width: 170px; 
+    font-size: 12px; 
+}
+.btn-play { 
+    padding: 8px 20px; 
+    background: #28a745; 
+    color: white; 
+    border: none; 
+    border-radius: 4px; 
+    cursor: pointer; 
+    font-weight: bold; 
+}
+.btn-play:hover { 
+    background: #218838; 
+}
+#track-progress { 
+    flex: 1; 
+    cursor: pointer; 
+}
+#track-time-label { 
+    font-size: 12px; 
+    color: #666; 
+    min-width: 140px; 
+    text-align: center; 
+}
+
+/* 标签页导航 */
+.tab-nav {
+    display: flex;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 8px;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 8px 12px;
+    border: none;
+    background: #f5f5f5;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.tab-btn:hover {
+    background: #e8e8e8;
+}
+
+.tab-btn.active {
+    background: #fff;
+    color: #1a73e8;
+    border-bottom: 2px solid #1a73e8;
+    font-weight: bold;
+}
+
+/* 标签页内容 */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
