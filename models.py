@@ -150,7 +150,7 @@ def get_latest_snapshot(ten_minutes_ago_iso):
         INNER JOIN (
             SELECT mmsi, MAX(timestamp) as max_time
             FROM ship_positions
-            WHERE timestamp <= ?
+            WHERE timestamp >= ?
             GROUP BY mmsi
         ) latest ON sp.mmsi = latest.mmsi AND sp.timestamp = latest.max_time
     """

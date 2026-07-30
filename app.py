@@ -29,7 +29,7 @@ register_socket_events(socketio)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', tdt_key=Config.TDT_KEY or '')
 
 # ==========================================
 # 启动

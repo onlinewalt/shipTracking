@@ -14,6 +14,8 @@ def parse_ais_eta(eta_dict):
     try:
         current_year = datetime.now().year
         dt = datetime(year=current_year, month=month, day=day, hour=hour, minute=minute)
+        if dt < datetime.now():
+            dt = dt.replace(year=current_year + 1)
         return dt.strftime("%Y-%m-%dT%H:%M")
     except ValueError:
         return None

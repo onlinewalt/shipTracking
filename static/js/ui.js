@@ -8,7 +8,7 @@
  * @param {HTMLElement} statusPanel - 状态栏 DOM 元素
  * @param {Object} vectorSource - 共享的 Vector Source
  */
-export function initUIHandlers(map, state, statusPanel, vectorSource) {
+export function initUIHandlers(map, state, statusPanel, vectorSource, socket) {
     // 1. DOM 元素获取
     const mmsiInput = document.getElementById('mmsiInput');
     const queryBtn = document.getElementById('queryBtn');
@@ -23,7 +23,6 @@ export function initUIHandlers(map, state, statusPanel, vectorSource) {
     const trackTimeLabel = document.getElementById('track-time-label');
 
     // 2. 全局状态管理 (用于回放等)
-    const replayStates = {};
     let currentReplayMmsi = null;
 
     // 3. UI 交互逻辑
@@ -36,7 +35,7 @@ export function initUIHandlers(map, state, statusPanel, vectorSource) {
             // 全船模式
             state.isFullShipMode = true;
             socket.emit('query_ship', { mmsi: '' });
-            socket.emit('get_all_ships_snapshot');
+            socket.emit('all_ships_snapshot');
         } else {
             // 指定船只模式
             state.isFullShipMode = false;
@@ -85,20 +84,22 @@ export function initUIHandlers(map, state, statusPanel, vectorSource) {
         trackStart.value = yesterday.toISOString().slice(0, 16);
         trackPanel.style.display = 'flex';
         
-        const stateObj = replayStates[mmsi];
+        const utils = window.replayUtils || {};
+        const stateObj = utils.replayStates ? utils.replayStates[mmsi] : null;
         if (stateObj) {
             playTrackBtn.textContent = stateObj.timer ? '⏸ 暂停' : '▶ 继续';
         } else {
             playTrackBtn.textContent = '▶ 回放';
         }
         trackProgress.value = 0;
-        trackTimeUpLabel.textContent = '就绪';
+        trackTimeLabel.textContent = '就绪';
     };
 
     // 播放/暂停按钮
     playTrackBtn.addEventListener('click', () => {
         if (!currentReplayMmsi) return;
-        const stateObj = replayStates[currentReplayMmsi];
+        const utils = window.replayUtils || {};
+        const stateObj = utils.replayStates ? utils.replayStates[currentReplayMmsi] : null;
         
         if (!stateObj || !stateObj.data) {
             const start = trackStart.value;
@@ -162,14 +163,12 @@ export function initUIHandlers(map, state, statusPanel, vectorSource) {
         const point = stateObj.data[index];
         const coord = stateObj.lineCoords[index];
         
-        // 1. 更新红点位置
         stateObj.replayFeature.setGeometry(new ol.geom.Point(coord));
         
-        // 2. 更新时间与状态栏
-        const displayName = point[4] || stateObj.mmsi;
-        const destination = point[5] || 'N/A';
-        const eta = point[6] || 'N/A';
-        const timestamp = point[7];
+        const displayName = point.ship_name || stateObj.mmsi;
+        const destination = point.destination || 'N/A';
+        const eta = point.eta || 'N/A';
+        const timestamp = point.timestamp;
         
         timeLabel.textContent = timestamp;
         statusPanel.textContent = `🎬 回放中: ${displayName} | 目的港: ${destination} | ETA: ${eta} | ${timestamp}`;
@@ -190,18 +189,19 @@ export function initUIHandlers(map, state, statusPanel, vectorSource) {
         // 清除列表
         container.innerHTML = '<div class="empty-msg">暂无追踪船只</div>';
         
-        // 停止所有回放
-        Object.keys(replayStates).forEach(mmsi => {
-            if (replayStates[mmsi].timer) clearInterval(replayStates[mmsi].timer);
-            if (replayStates[mmsi].replayLayer) map.removeLayer(replayStates[mmsi].replayLayer);
-            if (replayStates[mmsi].lineLayer) map.removeLayer(replayStates[mmsi].lineLayer);
+        const utils = window.replayUtils || {};
+        const states = utils.replayStates || {};
+        Object.keys(states).forEach(mmsi => {
+            if (states[mmsi].timer) clearInterval(states[mmsi].timer);
+            if (states[mmsi].replayLayer) map.removeLayer(states[mmsi].replayLayer);
+            if (states[mmsi].lineLayer) map.removeLayer(states[mmsi].lineLayer);
         });
-        // 修改后
-        Object.keys(replayStates).forEach(key => delete replayStates[key]);
+        if (utils.replayStates) {
+            Object.keys(utils.replayStates).forEach(key => delete utils.replayStates[key]);
+        }
         trackPanel.style.display = 'none';
     }
 
     // 将必要的函数挂载到全局或 state 上，供 socket.js 调用
     state.clearAllShips = clearAllShips;
-    window.replayUtils = { replayStates, currentReplayMmsi };
 }

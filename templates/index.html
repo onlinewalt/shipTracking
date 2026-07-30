@@ -61,7 +61,7 @@
     <!-- 主应用入口脚本 -->
     <script type="module">
         // 1. 配置天地图 Key
-        const TDT_KEY = "94e19d930f28e43914d30d3315332a49";
+        const TDT_KEY = "{{ tdt_key }}";
         if (!TDT_KEY) {
             console.error("❌ 错误：未获取到天地图 API Key，请检查后端环境变量配置！");
         }
@@ -96,21 +96,22 @@
                 }
             };
 
-            // 初始化
+            const statusPanel = document.getElementById('status-panel');
+
             const socket = initSocketHandlers(
                 map, 
                 App.state, 
                 document.getElementById('shipListContainer'), 
-                document.getElementById('status-panel'),
+                statusPanel,
                 vectorSource
             );
 
             initUIHandlers(
                 map, 
                 App.state, 
-                document.getElementById('status-panel'),
+                statusPanel,
                 vectorSource,
-                socket 
+                socket
             );
 
             // 挂载到 window 便于调试

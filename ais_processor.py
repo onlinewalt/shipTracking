@@ -100,31 +100,19 @@ def _process_static_data(message, socketio):
     destination = static_data.get('Destination', '').strip()
     parsed_eta = parse_ais_eta(static_data.get('Eta'))
 
-    # 检查数据库是否已有记录
-    latest_data = get_latest_static_data_for_mmsi(mmsi)
-    if latest_data and latest_data.get('ship_name'):
-        # 数据库已有，更新缓存
-        ship_static_cache[mmsi] = {
-            'name': latest_data['ship_name'],
-            'destination': destination or latest_data.get('destination', 'N/A'),
-            'eta': parsed_eta or latest_data.get('eta', 'N/A')
-        }
-    else:
- # 数据库无记录，持久化到数据库并更新缓存
-        if name:
-            # ✅ 调用 models.py 中的函数将静态数据写入数据库
-            save_ship_static_data({
-                'mmsi': mmsi,
-                'ship_name': name,
-                'destination': destination or 'N/A',
-                'eta': parsed_eta or 'N/A'
-            })
-            ship_static_cache[mmsi] = {
-                'name': name,
-                'destination': destination or 'N/A',
-                'eta': parsed_eta or 'N/A'
-            }
-            print(f"📝 静态数据已持久化: MMSI={mmsi}, 船名={name}")
+    save_ship_static_data({
+        'mmsi': mmsi,
+        'ship_name': name or 'N/A',
+        'destination': destination or 'N/A',
+        'eta': parsed_eta or 'N/A'
+    })
+    ship_static_cache[mmsi] = {
+        'name': name or mmsi,
+        'destination': destination or 'N/A',
+        'eta': parsed_eta or 'N/A'
+    }
+    if name:
+        print(f"📝 静态数据已持久化: MMSI={mmsi}, 船名={name}")
 
 def _process_position_report(message, socketio, data_push_callback=None):
     """处理动态位置数据"""

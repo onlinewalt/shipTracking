@@ -338,6 +338,65 @@ export function initSocketHandlers(map, state, shipListContainer, statusPanel, v
         }
     });
 
+    // 6. 轨迹数据返回 (ship_track_data)
+    socket.on('ship_track_data', function(data) {
+        const { mmsi, positions } = data;
+        if (!mmsi || !positions || positions.length < 2) {
+            statusPanel.textContent = `📭 ${mmsi} 轨迹数据不足`;
+            return;
+        }
+
+        const lineCoords = positions.map(p => ol.proj.fromLonLat([p.lon, p.lat]));
+        const lineString = new ol.geom.LineString(lineCoords);
+
+        const replayLayer = new ol.layer.Vector({
+            source: new ol.source.Vector({
+                features: [
+                    new ol.Feature({
+                        geometry: lineString,
+                        style: new ol.style.Style({
+                            stroke: new ol.style.Stroke({ color: '#ff0000', width: 2 })
+                        })
+                    })
+                ]
+            })
+        });
+        map.addLayer(replayLayer);
+
+        const replayFeature = new ol.Feature({
+            geometry: new ol.geom.Point(lineCoords[0])
+        });
+        replayFeature.setStyle(new ol.style.Style({
+            image: new ol.style.Circle({
+                radius: 8,
+                fill: new ol.style.Fill({ color: '#ff0000' }),
+                stroke: new ol.style.Stroke({ color: '#fff', width: 2 })
+            })
+        }));
+        const replayVectorSource = new ol.source.Vector({ features: [replayFeature] });
+        const replayPointLayer = new ol.layer.Vector({ source: replayVectorSource });
+        map.addLayer(replayPointLayer);
+
+        if (!window.replayUtils) {
+            window.replayUtils = { replayStates: {}, currentReplayMmsi: null };
+        }
+        window.replayUtils.replayStates[mmsi] = {
+            data: positions,
+            lineCoords,
+            replayFeature,
+            replayLayer,
+            lineLayer: replayLayer,
+            mmsi,
+            timer: null
+        };
+
+        statusPanel.textContent = `✅ ${mmsi} 轨迹已加载，共 ${positions.length} 个点`;
+        if (window.replayUtils.currentReplayMmsi === mmsi) {
+            const btn = document.getElementById('playTrackBtn');
+            if (btn) btn.textContent = '▶ 回放';
+        }
+    });
+
     // --- 事件委托：处理轨迹按钮点击 ---
     trackingContainer.addEventListener('click', function(e) {
         const btn = e.target.closest('.btn-track');

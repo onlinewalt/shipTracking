@@ -42,7 +42,6 @@ def register_socket_events(socketio):
     def flush_buffer():
         """将缓冲区中的消息批量推送给前端"""
         nonlocal  last_flush_time
-        global throttle_buffer
         with buffer_lock:
             if not throttle_buffer:
                 return
@@ -206,9 +205,11 @@ def register_socket_events(socketio):
             ships = []
             for row in rows:
                 ship_dict = {
-                    'mmsi': row[0], 'lat': row[1], 'lon': row[2], 'course': row[3] or 0,
-                    'speed': row[4] or 0, 'ship_name': row[5] or row[0],
-                    'destination': row[6] or 'N/A', 'eta': row[7] or 'N/A', 'timestamp': row[8]
+                    'mmsi': row['mmsi'], 'lat': row['lat'], 'lon': row['lon'],
+                    'course': row['course'] or 0,
+                    'speed': row['speed'] or 0, 'ship_name': row['ship_name'] or row['mmsi'],
+                    'destination': row['destination'] or 'N/A', 'eta': row['eta'] or 'N/A',
+                    'timestamp': row['timestamp']
                 }
                 ships.append(ship_dict)
             
@@ -250,14 +251,13 @@ def register_socket_events(socketio):
             positions = get_ship_positions(mmsi, start_time, end_time)
             if positions:
                 emit('ship_track_data', {'mmsi': mmsi, 'positions': positions})
-                # 强制更新状态栏显示最新位置
                 latest = positions[-1]
                 location_msg = {
-                    'mmsi': mmsi, 'lat': latest[0], 'lon': latest[1],
-                    'speed': latest[3] or 0, 'course': latest[2] or 0,
-                    'ship_name': latest[4] or mmsi,
-                    'destination': latest[5] or '未知',
-                    'eta': latest[6] if len(latest) > 6 and latest[6] else '未知'
+                    'mmsi': mmsi, 'lat': latest['lat'], 'lon': latest['lon'],
+                    'speed': latest.get('speed', 0) or 0, 'course': latest.get('course', 0) or 0,
+                    'ship_name': latest.get('ship_name') or mmsi,
+                    'destination': latest.get('destination') or '未知',
+                    'eta': latest.get('eta') or '未知'
                 }
                 emit('ship_location', location_msg)
             else:
