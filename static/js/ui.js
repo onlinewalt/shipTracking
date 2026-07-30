@@ -78,6 +78,8 @@ export function initUIHandlers(map, state, statusPanel, vectorSource, socket) {
     // 全局暴露的轨迹按钮点击事件 (供事件委托调用)
     window.openTrack = function(mmsi) {
         currentReplayMmsi = mmsi;
+        if (!window.replayUtils) window.replayUtils = { replayStates: {}, currentReplayMmsi: null };
+        window.replayUtils.currentReplayMmsi = mmsi;
         const now = new Date();
         const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
         trackEnd.value = now.toISOString().slice(0, 16);
@@ -119,7 +121,8 @@ export function initUIHandlers(map, state, statusPanel, vectorSource, socket) {
     // 进度条拖动
     trackProgress.addEventListener('input', () => {
         if (!currentReplayMmsi) return;
-        const stateObj = replayStates[currentReplayMmsi];
+        const utils = window.replayUtils || {};
+        const stateObj = utils.replayStates ? utils.replayStates[currentReplayMmsi] : null;
         if (!stateObj || !stateObj.data) return;
         
         const index = Math.floor((trackProgress.value / 100) * (stateObj.data.length - 1));

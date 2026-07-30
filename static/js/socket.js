@@ -42,7 +42,7 @@ export function initSocketHandlers(map, state, shipListContainer, statusPanel, v
                     <div class="ship-details">
                         <b class="ship-name">${displayName}</b>
                         <div class="ship-stats" style="font-size:12px;color:#666;margin-top:4px;">
-                            速度: ${speed || 'N/A'} 节 | 航向: ${course || 'N/A'}° | 目的港： ${destination || 'N/A'} | ETA: ${eta || 'N/A'}
+                            速度: ${speed != null ? speed + ' 节' : 'N/A'} | 航向: ${course != null ? course + '°' : 'N/A'} | 目的港： ${destination || 'N/A'} | ETA: ${eta || 'N/A'}
                         </div>
                     </div>
                 </div>
