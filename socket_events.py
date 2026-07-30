@@ -87,7 +87,6 @@ def register_socket_events(socketio):
             if ais_client_task.is_alive():
                 print("⚠️ AIS 客户端线程未能在 2 秒内正常退出")
             ais_client_task = None
-            stop_event.clear()
 
     def start_or_restart_ais(mmsi_list):
         """启动或重启 AIS 客户端"""

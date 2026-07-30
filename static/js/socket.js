@@ -9,11 +9,10 @@
  * @param {HTMLElement} statusPanel - 状态栏的 DOM 元素
  * @param {Object} vectorSource - OpenLayers Vector Source 用于管理船只标记
  */
-export function initSocketHandlers(map, state, shipListContainer, statusPanel, vectorSource) {
+export function initSocketHandlers(map, state, statusPanel, vectorSource) {
     const socket = io();
     
-    // 获取独立的标签页容器
-    const trackingContainer = document.getElementById('tracking-container') || shipListContainer;
+    const trackingContainer = document.getElementById('tracking-container');
     const historyContainer = document.getElementById('history-container');
 
     // ✅ 新增：连接成功后，立即请求一次全船快照

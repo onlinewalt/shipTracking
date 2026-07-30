@@ -32,14 +32,17 @@ export function initUIHandlers(map, state, statusPanel, vectorSource, socket) {
     queryBtn.addEventListener('click', () => {
         const rawMmsi = mmsiInput.value.trim();
         if (rawMmsi === '') {
-            // 全船模式
             state.isFullShipMode = true;
             socket.emit('query_ship', { mmsi: '' });
             socket.emit('all_ships_snapshot');
         } else {
-            // 指定船只模式
+            const mmsiParts = rawMmsi.split(',').map(m => m.trim()).filter(m => /^\d{9}$/.test(m));
+            if (mmsiParts.length === 0) {
+                statusPanel.textContent = '⚠️ 无效 MMSI，请输入 9 位数字编号';
+                return;
+            }
             state.isFullShipMode = false;
-            socket.emit('query_ship', { mmsi: rawMmsi });
+            socket.emit('query_ship', { mmsi: mmsiParts.join(',') });
         }
     });
 

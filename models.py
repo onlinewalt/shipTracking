@@ -1,14 +1,24 @@
 # models.py
 import sqlite3
+import threading
 from config import Config
 
+_db_lock = threading.Lock()
 
 def get_db_connection():
     """获取数据库连接"""
     conn = sqlite3.connect(Config.DB_NAME, check_same_thread=False)
-    conn.row_factory = sqlite3.Row  # 支持通过列名访问数据
-    conn.execute('PRAGMA journal_mode=WAL;')  # 开启 WAL 模式提升并发性能
+    conn.row_factory = sqlite3.Row
+    conn.execute('PRAGMA journal_mode=WAL;')
     return conn
+
+
+def _with_db_lock(func):
+    """装饰器：确保数据库操作在锁保护下执行"""
+    def wrapper(*args, **kwargs):
+        with _db_lock:
+            return func(*args, **kwargs)
+    return wrapper
 
 
 def init_db():
@@ -72,18 +82,23 @@ def init_db():
 
 # ==================== 追踪历史 ====================
 
+@_with_db_lock
 def save_tracking_history(mmsi_list):
-    """保存追踪历史"""
+    """保存追踪历史（自动去重）"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO tracking_history (mmsi_list) VALUES (?)",
-        (",".join(mmsi_list),)
-    )
-    conn.commit()
+    mmsi_str = ",".join(mmsi_list)
+    cursor.execute("SELECT id FROM tracking_history WHERE mmsi_list = ?", (mmsi_str,))
+    if not cursor.fetchone():
+        cursor.execute(
+            "INSERT INTO tracking_history (mmsi_list) VALUES (?)",
+            (mmsi_str,)
+        )
+        conn.commit()
     conn.close()
 
 
+@_with_db_lock
 def get_tracking_history():
     """获取最近10条追踪历史"""
     conn = get_db_connection()
@@ -93,12 +108,12 @@ def get_tracking_history():
     )
     rows = cursor.fetchall()
     conn.close()
-    # return rows
     return [dict(row) for row in rows]
 
 
 # ==================== 船舶位置 ====================
 
+@_with_db_lock
 def save_ship_position(data_dict):
     """保存船舶位置数据"""
     conn = get_db_connection()
@@ -123,6 +138,7 @@ def save_ship_position(data_dict):
     conn.close()
 
 
+@_with_db_lock
 def get_ship_positions(mmsi, start_time, end_time):
     """获取指定船舶在时间范围内的位置数据"""
     conn = get_db_connection()
@@ -139,7 +155,8 @@ def get_ship_positions(mmsi, start_time, end_time):
     return [dict(row) for row in rows]
 
 
-def get_latest_snapshot(ten_minutes_ago_iso):
+@_with_db_lock
+def get_latest_snapshot(ten_minutes_ago_iso, limit=1000):
     """获取全船最新快照（10分钟内）"""
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -152,9 +169,10 @@ def get_latest_snapshot(ten_minutes_ago_iso):
             FROM ship_positions
             WHERE timestamp >= ?
             GROUP BY mmsi
+            LIMIT ?
         ) latest ON sp.mmsi = latest.mmsi AND sp.timestamp = latest.max_time
     """
-    cursor.execute(query, (ten_minutes_ago_iso,))
+    cursor.execute(query, (ten_minutes_ago_iso, limit))
     rows = cursor.fetchall()
     conn.close()
     return rows
@@ -162,11 +180,11 @@ def get_latest_snapshot(ten_minutes_ago_iso):
 
 # ==================== 船舶静态数据 ====================
 
+@_with_db_lock
 def get_latest_static_data_for_mmsi(mmsi):
     """获取指定 MMSI 的最新静态数据"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    # ✅ 修复：从独立的 ship_static_data 表查询
     cursor.execute(
         "SELECT ship_name, destination, eta FROM ship_static_data WHERE mmsi = ?",
         (mmsi,)
@@ -176,6 +194,7 @@ def get_latest_static_data_for_mmsi(mmsi):
     return dict(row) if row else None
 
 
+@_with_db_lock
 def save_ship_static_data(data):
     """保存或更新船舶静态数据（UPSERT）"""
     conn = get_db_connection()
@@ -198,6 +217,7 @@ def save_ship_static_data(data):
     conn.close()
 
 
+@_with_db_lock
 def get_all_ship_static_data():
     """获取数据库中所有船舶静态数据（用于缓存预热）"""
     conn = get_db_connection()
@@ -208,7 +228,6 @@ def get_all_ship_static_data():
 
     result = {}
     for row in rows:
-        # ✅ 优化：使用列名访问，与 row_factory = sqlite3.Row 配合
         result[row['mmsi']] = {
             'name': row['ship_name'],
             'destination': row['destination'],

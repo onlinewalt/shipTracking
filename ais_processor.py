@@ -146,9 +146,6 @@ def _process_position_report(message, socketio, data_push_callback=None):
     
     save_ship_position(ship_info)
     print(f"📍 船舶位置已保存: MMSI={mmsi}, 坐标=({ship_info['lat']}, {ship_info['lon']})")
-    # 节流推送逻辑将移至 socket_events.py 中处理
 
-        # ✅ 关键修改：使用回调函数推送数据
     if data_push_callback:
         data_push_callback(ship_info)
-    # 如果 data_push_callback 为 None，则不推送（便于测试或特殊场景）

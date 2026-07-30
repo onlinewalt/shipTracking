@@ -16,7 +16,7 @@ class Config:
     DB_NAME = "ships.db"
     HOST = '0.0.0.0'
     PORT = 5000
-    DEBUG = True
+    DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "yes")
 
     # SocketIO 配置
     SOCKETIO_ASYNC_MODE = 'threading'
