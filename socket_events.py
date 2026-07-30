@@ -94,7 +94,8 @@ def register_socket_events(socketio):
 
         # 1. 检查是否已有相同任务在运行
         if (ais_client_task and ais_client_task.is_alive() 
-                and current_mmsi_list == mmsi_list):
+                and current_mmsi_list == mmsi_list
+                and not stop_event.is_set()):
             print(f"ℹ️ AIS 任务已在运行中，参数相同，跳过重启")
             return
 
@@ -123,9 +124,13 @@ def register_socket_events(socketio):
             print("🧹 AIS 线程事件循环已关闭")
 
     def auto_stop_ais_stream():
+        global current_mode, ais_timer, current_mmsi_list
         print("⏰ 全船模式限时已到，自动停止")
         socketio.emit('status_update', {'msg': '⏰ 全船模式限时已到，自动停止'})
         stop_event.set()
+        current_mode = 'idle'
+        current_mmsi_list = []
+        ais_timer = None
 
     # --- 启动定时刷新线程 ---
     start_periodic_flush()
